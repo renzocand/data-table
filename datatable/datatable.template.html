@@ -1,0 +1,414 @@
+<!--INICIO TEMPLATE DATATABLE-->
+<div class="jarviswidget jarviswidget-sortable jarviswidget-color-teal no-margins">
+    <!--INICIO ENCABEZADO-->
+    <header *ngIf="options_value.hide_bar_header === false; else soloborde">
+        <span class="widget-icon"> <i class="fa fa-table"></i> </span>
+        <h2>{{options_value.title}}</h2>
+    </header>
+    <ng-template #soloborde>
+        <div style="border-bottom: 1px solid #ccc;padding: 0;"></div>
+    </ng-template>
+    <!--FINAL ENCABEZADO-->
+    <!--INICIO SPINNER (LOADER)-->
+    <div class="spinner-box sk-loading" *ngIf="loading.loading">
+        <br>
+        <div class="sk-spinner sk-spinner-wave">
+            <div class="sk-rect1"></div>
+            <div class="sk-rect2"></div>
+            <div class="sk-rect3"></div>
+            <div class="sk-rect4"></div>
+            <div class="sk-rect5"></div>
+        </div>
+    </div>
+    <!--FINAL SPINNER (LOADER)-->
+    <!--INICIO MENU SUPERIOR-->
+    <div class="row after-header-table"
+        *ngIf="(options_value.show_after_header_table && resultados.length>0 && !loading.loading) || (filtering && !loading.loading)">
+        <div class="col-sm-6 col-md-6">
+            <div class="row">
+                <div class="col-md-7"
+                    [ngClass]="{'col-md-8': options_value.combobox_show, 'col-md-10': !options_value.combobox_show}">
+                    <!--INICIO CAMPO DE BUSQUEDA-->
+                    <!-- <div class="input-group" *ngIf="options_value.show_search_field">
+                        <input  type="text" class="form-control input-sm" [(ngModel)]="search_word" #search_input="ngModel" placeholder="Buscar...">
+                        <span class="input-group-addon search-icon" (click)="filter_search()"><i class="fa fa-search"></i></span>
+                    </div> -->
+                    <div class="input-group input-group-xs" *ngIf="options_value.show_search_field">
+                        <input type="text" class="form-control" [(ngModel)]="search_word" (keyup)="filter_search()"
+                            #search_input="ngModel" placeholder="Buscar..." />
+                        <span *ngIf="!search_word; else btneliminar" class="input-group-addon"
+                            style="line-height: 1;"><i class="fa fa-search"></i></span>
+                        <ng-template #btneliminar>
+                            <div *ngIf="search_word" class="input-group-btn"><button (click)="limpiar_filtro()"
+                                    class="btn btn-danger"><i class="far fa-trash-alt"></i></button>
+                            </div>
+                        </ng-template>
+                    </div>
+                    <!--FINAL CAMPO DE BUSQUEDA-->
+                </div>
+                <div *ngIf="options_value.combobox_show" class="col-md-4">
+                    <div class="input-group">
+                        <select (change)="combobox_event($event.target.value)" class="form-control input-xs">
+                            <option *ngFor="let item of options_value.combobox_show_array" [value]="item.codigo">
+                                {{item.descripcion}}
+                            </option>
+                        </select>
+                        <span class="input-group-addon addon-xs" style="font-size: 15px;"><i
+                                class="fas fa-chart-area"></i></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-6">
+            <div class="pull-right">
+                <!--INICIO CAMBIO DE PAGINACION-->
+                <!-- <a id="download_excel" *ngIf="options_value.show_toexcel" (click)="to_excel('table_ref')" class="mgr-dt-btn mgr-dt-green-btn" [class.disabled]="resultados.length > 0" type="button"><i class="fa fa-table"></i> Excel</a> -->
+                <!-- <button *ngIf="options_value.show_topdf" (click)="to_pdf()" class="mgr-dt-btn mgr-dt-orange-btn" type="button"><i class="fa fa-clone"></i> PDF</button> -->
+                <button *ngIf="options_value.show_toexcel" (click)="to_excel()" [disabled]="resultados.length<1"
+                    type="button" class="btn btn-labeled bg-color-grey txt-color-green btn-xs">
+                    <span class="btn-label-xs"><i class="fas fa-file-excel"></i></span>Excel
+                </button>
+                <button *ngIf="options_value.show_topdf" (click)="to_pdf()" type="button"
+                    [disabled]="resultados.length<1" class="btn btn-labeled bg-color-grey txt-color-red btn-xs">
+                    <span class="btn-label-xs"><i class="fas fa-file-pdf"></i></span>PDF
+                </button>
+                <div class="mgr-dt-pagination-select">
+                    <form #pagination_form="ngForm">
+                        <select class="form-control input-xs" (ngModelChange)="onChangeSelection($event)"
+                            [ngModel]="offsetView" (change)="update_offsets()" name="pag">
+                            <option *ngFor="let offset of options_value.navigation_offsets">{{offset}}</option>
+                        </select>
+                    </form>
+                </div>
+                <!--FINAL CAMBIO DE PAGINACION-->
+            </div>
+        </div>
+    </div>
+    <!--FINAL MENU SUPERIOR-->
+    <!--INICIO TEXTO VACIO-->
+    <div *ngIf="(resultados.length==0 && !filtering && !loading.loading) && options_value.empty_text.length > 0">
+        <h5 class="text-center text-info">{{options_value.empty_text}}</h5>
+        <br>
+    </div>
+    <!--FINAL TEXTO VACIO-->
+    <!--INICIO TEXTO CLAVE NO ENCONTRADO-->
+    <div *ngIf="resultados.length==0 && filtering && !loading.loading">
+        <h5 class="text-center text-info">Palabra clave no encontrada</h5>
+        <br>
+    </div>
+    <!--FINAL TEXTO CLAVE NO ENCONTRADO-->
+    <div *ngIf="resultados.length>0 && !loading.loading">
+        <div [class.not-min-height]="!options_value.empty_text" class="widget-body no-padding animated fadeIn"
+            [class.mgr-pagination-external]="options_value.pagination_external && !options_value.pagination_external_non_style">
+            <!-- table-responsive --><div class=" {{options_value.customClass}}"
+                [class.table-wrapper-scroll-y]="options_value.responsive_y">
+                <!--INICIO TABLA-->
+                <table [id]="options_value.id" class="table table-bordered table-hover no-margins mgr-dt">
+                    <!--INICIO ENCABEZADO DE TABLA-->
+                    <thead>
+                        <tr *ngIf="options_value.columns_headers_radio" class="smart-form mrg-radio">
+                            <td *ngFor="let header of options_value.columns;let i = index" class="text-center">
+                                <div>
+                                    <label class="radio">
+                                        <input
+                                            (change)="radio_column_event($event.target.checked, i, options_value.columns[i])"
+                                            type="radio" name="radio-inline" checked="checked"><i></i>
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr *ngIf="options_value.columns_headers_checkbox" class="mrg-checkbox">
+                            <td *ngIf="options_value.checkbox_event"></td>
+                            <td *ngFor="let header of options_value.columns;let i = index" class="text-center">
+                                <div *ngIf="options_value.columns_headers_checkbox_event[i]" class="checkbox">
+                                    <label class="text-center">
+                                        <input
+                                            (change)="checkbox_colum_event($event.target.checked, i, options_value.columns[i])"
+                                            type="checkbox" class="checkbox style-0"
+                                            [disabled]="options_value.disable_checkbox" />
+                                        <span></span>
+                                    </label>
+                                </div>
+                            </td>
+                            <td *ngIf="options_value.options.view || options_value.options.edit || options_value.options.delete"
+                                colspan="999"></td>
+                        </tr>
+                        <tr>
+                            <th *ngIf="options_value.checkbox_event" class="check-header text-center">
+                                <div class="checkbox">
+                                    <label class="text-center">
+                                        <input (change)="checkbox_select_all($event.target.checked)" type="checkbox"
+                                            class="checkbox style-0"
+                                            [disabled]="options_value.disable_checkbox" /><span></span>
+                                    </label>
+                                </div>
+                            </th>
+                            <th *ngIf="options_value.show_number_elements"
+                                class="no-select text-nowrap text-right width80">#</th>
+                            <th (click)="sort_column(i)" *ngFor="let header of options_value.columns;let i = index"
+                                class="no-select sort-header text-nowrap" [ngClass]="options_value.columns_style[i]"
+                                [title]="options_value.columns_headers_title[i]">
+                                {{ options_value.columns_headers[i] }}
+                                <i *ngIf="!options_value.hide_sort" class="fa" [ngClass]="{
+                                        'fa-arrow-up':ascendent && order==options_value.columns[i], 
+                                        'fa-arrow-down':!ascendent && order==options_value.columns[i], 
+                                        'fa-sort':order!=options_value.columns[i]
+                                    }">
+                                </i>
+                            </th>
+                            <th *ngIf="options_value.options.view || options_value.options.edit || options_value.options.delete || options_value.options.word || options_value.options.excel"
+                                class="no-select text-center text-nowrap" style="width:1%;" colspan="999">
+                                {{options_value.options_header}}
+                            </th>
+                            <!--este titulo Acciones solo se muestra para el cron modal-->
+                            <th *ngIf="options_value.options.stop && options_value.options.play"
+                                class="no-select text-center text-nowrap" style="width:1%;" colspan="999">
+                                {{options_value.options_header}}
+                            </th>
+
+                        </tr>
+                    </thead>
+                    <!--FINAL ENCABEZADO DE TABLA-->
+                    <!--INICIO ENCABEZADO DE CUERPO-->
+                    <tbody>
+                        <ng-template ngFor let-x [ngForOf]="displaying" let-i="index">
+                            <tr class="mgr-hover-row"
+                                [ngClass]="{'mgr-clicked-row': (requestOffsetLeft -1 + i )==show_clicked, 'mgr-row-marked': options_value.row_marked!=null && resultados[requestOffsetLeft -1 + i][options_value.row_marked.id_name]==options_value.row_marked.id_value}">
+                                <td class="text-center mgr-table" *ngIf="options_value.checkbox_event">
+                                    <div class="checkbox">
+                                        <label class="text-center">
+                                            <input [checked]="resultados[requestOffsetLeft -1 + i].selected"
+                                                (change)="checkbox_event({index:requestOffsetLeft -1 + i, value:$event.target.checked}, $event)"
+                                                type="checkbox" class="checkbox style-0"
+                                                [disabled]="options_value.disable_checkbox" />
+                                            <span></span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td *ngIf="options_value.show_number_elements" class="mgr-table text-right">
+                                    <span>{{i+1}}</span>
+                                </td>
+                                <td (click)="row_clicked(requestOffsetLeft -1 + i, !options_value.columns_events || !options_value.columns_events[j])"
+                                    *ngFor="let column of options_value.columns; let j = index" [ngClass]="{
+                                        'mgr-table': true, 
+                                        'text-nowrap': options_value.wrap_column && options_value.wrap_column[j], 
+                                        'text-right': options_value.columns_aline[j] === 'd', 
+                                        'text-center': options_value.columns_aline[j] === 'c', 
+                                        'ctxm': options_value.columns_context_menu[j], 
+                                        'mgr-td-title': options_value.title_td[j] 
+                                    }">
+                                    <a [title]="options_value.title_td[j] ? (resultados[requestOffsetLeft -1 + i][column] | dinamico:options_value.pipes[j]) : ''"
+                                        [ngClass]="options_value.columns_style_body[j]"
+                                        (click)="column_event(requestOffsetLeft -1 + i,options_value.columns[j], $event)"
+                                        *ngIf="options_value.columns_events && options_value.columns_events[j]">{{ resultados[requestOffsetLeft -1 + i][column] | dinamico:options_value.pipes[j] }}</a>
+                                    <span
+                                        [title]="options_value.title_td[j] ? (resultados[requestOffsetLeft -1 + i][column] | dinamico:options_value.pipes[j]) : ''"
+                                        *ngIf="!options_value.columns_events || !options_value.columns_events[j]"
+                                        [ngClass]="options_value.columns_style_body[j]"
+                                        [innerHTML]="resultados[requestOffsetLeft -1 + i][column] | dinamico:options_value.pipes[j]"
+                                        [attr.data-content]="resultados[requestOffsetLeft -1 + i][column] | dinamico:options_value.pipes[j]"></span>
+                                </td>
+
+                                <td title="Exportar a Excel" *ngIf="options_value.options.excel"
+                                    (click)="excel_event(requestOffsetLeft -1 + i)"
+                                    class="text-center table-excel mgr-table">
+                                    <i class="fa fa-file-excel-o"
+                                        *ngIf="!loading_excel || index_clicked != (requestOffsetLeft -1 + i)"></i>
+                                    <i class='fa fa-spinner fa-spin'
+                                        *ngIf="loading_excel && index_clicked == (requestOffsetLeft -1 + i)"></i>
+                                </td>
+                                <td title="Exportar a Word" *ngIf="options_value.options.word"
+                                    (click)="word_event(requestOffsetLeft -1 + i)"
+                                    class="text-center table-word mgr-table">
+                                    <i class="fa fa-file-word-o"
+                                        *ngIf="!loading_word || index_clicked != (requestOffsetLeft -1 + i)"></i>
+                                    <i class='fa fa-spinner fa-spin'
+                                        *ngIf="loading_word && index_clicked == (requestOffsetLeft -1 + i)"></i>
+                                </td>
+
+                                <td *ngIf="options_value.options.button_custom1 && options_value.options_button_custom && options_value.options_button_custom.cb1"
+                                    (click)="button_custom1_event(requestOffsetLeft -1 + i,(options_value.options_button_custom.cb1.reserved && !resultados[requestOffsetLeft -1 + i].cb1))"
+                                    class="text-center mgr-table"
+                                    [ngClass]="options_value.options_button_custom.cb1.class"
+                                    [title]="options_value.options_button_custom.cb1.title">
+                                    <i *ngIf="options_value.options_button_custom.cb1.reserved==true && !resultados[requestOffsetLeft -1 + i].cb1; else bCustom1Activo"
+                                        class="fa fa-minus"></i>
+                                    <ng-template #bCustom1Activo>
+                                        <i [ngClass]="options_value.options_button_custom.cb1.icon"
+                                            *ngIf="!loading_button_custom1 || index_clicked != (requestOffsetLeft -1 + i)"></i>
+                                        <i class='fa fa-spinner fa-spin'
+                                            *ngIf="loading_button_custom1 && index_clicked == (requestOffsetLeft -1 + i)"></i>
+                                    </ng-template>
+                                </td>
+                                <td *ngIf="options_value.options.view" (click)="view_event(requestOffsetLeft -1 + i)"
+                                    class="text-center table-open mgr-table">
+                                    <i class="glyphicon glyphicon-list" [title]="options_value.title_td"
+                                        *ngIf="!loading_view || index_clicked != (requestOffsetLeft -1 + i)"></i>
+                                    <i class='fa fa-spinner fa-spin'
+                                        *ngIf="loading_view && index_clicked == (requestOffsetLeft -1 + i)"></i>
+                                </td>
+                                <td *ngIf="(options_value.options.edit && options_value.reserved_check && (resultados[requestOffsetLeft -1 + i][options_value.reserved_column] == options_value.reserved_values.value_true))||(options_value.options.edit && !options_value.reserved_check)"
+                                    (click)="edit_event(requestOffsetLeft -1 + i)"
+                                    class="text-center table-edit mgr-table">
+                                    <i class="fa fa-edit" title="editar"
+                                        *ngIf="!loading_edit || index_clicked != (requestOffsetLeft -1 + i)"></i>
+                                    <i class='fa fa-spinner fa-spin'
+                                        *ngIf="loading_edit && index_clicked == (requestOffsetLeft -1 + i)"></i>
+                                </td>
+                                <td *ngIf="(options_value.options.edit && (options_value.reserved_check && (resultados[requestOffsetLeft -1 + i][options_value.reserved_column] != options_value.reserved_values.value_true)))"
+                                    class="text-center table-none mgr-table">
+                                    <i class="fa fa-minus"></i>
+                                </td>
+                                <td *ngIf="(options_value.options.delete && options_value.reserved_check && (resultados[requestOffsetLeft -1 + i][options_value.reserved_column] == options_value.reserved_values.value_true))||(options_value.options.delete && !options_value.reserved_check)"
+                                    (click)="delete_event(requestOffsetLeft -1 + i)"
+                                    class="text-center table-delete mgr-table">
+                                    <i class="far fa-trash-alt"
+                                        *ngIf="!loading_delete || index_clicked != (requestOffsetLeft -1 + i)"></i>
+                                    <i class='fa fa-spinner fa-spin'
+                                        *ngIf="loading_delete && index_clicked == (requestOffsetLeft -1 + i)"></i>
+                                </td>
+                                <td *ngIf="(options_value.options.delete && (options_value.reserved_check && (resultados[requestOffsetLeft -1 + i][options_value.reserved_column] != options_value.reserved_values.value_true)))"
+                                    class="text-center table-none mgr-table"><i class="fa fa-minus"></i></td>
+                                <!--estos iconos de play y stop , solo se muestra para el cron modal-->
+                                <td *ngIf="options_value.options.stop && options_value.options.play"
+                                    class="text-center table-none mgr-table" width="30%">
+                                    <i class="fas fa-play  text-success" title="Reproducir"
+                                        *ngIf="resultados[requestOffsetLeft -1 + i]['estado']!='ACTIVO'"
+                                        (click)="ejecucionEnviar(requestOffsetLeft -1 + i,resultados[requestOffsetLeft -1 + i],'play')"></i>
+                                    <i class="fas fa-stop  text-danger" title="Detener"
+                                        *ngIf="resultados[requestOffsetLeft -1 + i]['estado']=='ACTIVO'"
+                                        (click)="ejecucionEnviar(requestOffsetLeft -1 + i,resultados[requestOffsetLeft -1 + i],'stop')"></i>
+                                </td>
+                                <!--fin de los iconos play y stop -->
+
+                            </tr>
+                            <tr
+                                *ngIf="options_value.columns_child_active && (requestOffsetLeft -1 + i)==child_index_show">
+                                <td colspan="100%" class="child">
+                                    <div class="datatable-data-child">
+                                        <virtual-scroller #scroll
+                                            [items]="resultados[requestOffsetLeft -1 + child_index_show][options_value.columns_headers_child_name]">
+                                            <!-- table-responsive --><div class="">
+                                                <table class="table table-bordered table-hover no-margins mgr-dt">
+                                                    <thead #header>
+                                                        <tr class="child">
+                                                            <th *ngFor="let header_child of options_value.columns_child;let i = index"
+                                                                class="no-select sort-header text-nowrap"
+                                                                [ngClass]="options_value.columns_style[i]">
+                                                                {{ options_value.columns_headers_child[i] }}
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody #container>
+                                                        <tr *ngFor="let item_child of scroll.viewPortItems">
+                                                            <td class="mgr-table"
+                                                                *ngFor="let cell_child of options_value.columns_child"
+                                                                (click)="data_tabla(item_child[cell_child],cell_child)">
+                                                                {{item_child[cell_child]}}
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </virtual-scroller>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </tbody>
+                    <!--FINAL ENCABEZADO DE CUERPO-->
+                </table>
+                <!--FINAL TABLA-->
+            </div>
+            <!--INICIO PIE-->
+            <div *ngIf="options_value.pagination_external; else paginationInternal"
+                [class.hidden]="!options_value.show_widget_footer" class="widget-footer">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <!--INICIO MOSTRANDO-->
+                        <p class="pull-left showing-text">Mostrando <b>{{pagination_external_value.offset_left}}</b> -
+                            <b>{{pagination_external_value.offset_right}}</b> de
+                            <b>{{pagination_external_value.number_records}}</b> registros.</p>
+                        <!--FINAL MOSTRANDO-->
+                        <!--INICIO PAGINACION-->
+                        <div class="btn-group" role="group">
+                            <button (click)="pagination_navigation_external(1)"
+                                [disabled]="pagination_external_value.page <=1" class="btn nav-end btn-sm btn-default"
+                                type="button">
+                                <b><i class="fas fa-chevron-double-left"></i></b>
+                            </button>
+                            <button (click)="pagination_navigation_external(pagination_external_value.page-1)"
+                                class="btn btn-sm btn-primary nav-arrow-btn" type="button"
+                                [disabled]="pagination_external_value.page <=1">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="btn-group">
+                                <button *ngFor="let item of pag_reference_external;let i = index"
+                                    (click)="pagination_navigation_external(item)" type="button"
+                                    class="btn nav-btn btn-sm btn-default"
+                                    [class.nav-active]="pagination_external_value.page == item">
+                                    {{item}}
+                                </button>
+                            </div>
+                            <button (click)="pagination_navigation_external(pagination_external_value.page+1)"
+                                class="btn btn-sm btn-primary nav-arrow-btn" type="button"
+                                [disabled]="pagination_external_value.page >= page_end">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <button (click)="pagination_navigation_external(page_end)"
+                                [disabled]="pagination_external_value.page >= page_end" type="button"
+                                class="btn nav-end btn-sm btn-default">
+                                <b><i class="fas fa-chevron-double-right"></i></b>
+                            </button>
+                        </div>
+                        <!--FINAL PAGINACION-->
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGINACION -->
+            <ng-template #paginationInternal>
+                <div [class.hidden]="!options_value.show_widget_footer" class="widget-footer">
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <!--INICIO MOSTRANDO-->
+                            <p class="pull-left showing-text">Mostrando <b>{{requestOffsetLeft}}</b> -
+                                <b>{{requestOffsetRight}}</b> de <b>{{resultados.length}}</b> registros.</p>
+                            <!--FINAL MOSTRANDO-->
+                            <!--INICIO PAGINACION-->
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-primary nav-arrow-btn" type="button"
+                                    (click)="updateRequestsGoLeft()" [disabled]="requestOffsetLeft <=1">
+                                    <i class="fa fa-arrow-left"></i>
+                                </button>
+                                <button (click)="pagination_navigation(nav_min_value())" type="button"
+                                    class="btn nav-end btn-sm btn-default">
+                                    <b><i class="fa fa-angle-double-left"></i></b>
+                                </button>
+                                <div class="btn-group" *ngFor="let nav of pag_reference;let i = index">
+                                    <button *ngIf="nav_show(i + 1)" (click)="pagination_navigation(i+1)" type="button"
+                                        class="btn nav-btn btn-sm btn-default"
+                                        [class.nav-active]="nav_current_value() == i+1">
+                                        {{i+1}}
+                                    </button>
+                                </div>
+                                <button (click)="pagination_navigation(nav_max_value())" type="button"
+                                    class="btn nav-end btn-sm btn-default">
+                                    <b><i class="fa fa-angle-double-right"></i></b>
+                                </button>
+                                <button class="btn btn-sm btn-primary nav-arrow-btn" type="button"
+                                    (click)="updateRequestsGoRight()"
+                                    [disabled]="requestOffsetRight >= resultados.length">
+                                    <i class="fa fa-arrow-right"></i>
+                                </button>
+                            </div>
+                            <!--FINAL PAGINACION-->
+                        </div>
+                    </div>
+                </div>
+            </ng-template>
+            <!--FINAL PIE-->
+        </div>
+    </div>
+</div>
+<!--FINAL TEMPLATE DATATABLE-->
